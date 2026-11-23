@@ -2,7 +2,7 @@
 
 Train a small PyTorch encoder–decoder to turn `38` into `83 <eos>`. The notebook replays training updates and shows attention, gradients, and Adam with real values.
 
-[Live demo](https://singhcoder.github.io/ai-engineering/) · [Notebook](digit-reversal.ipynb)
+[Live demo](https://singhcoder.github.io/ai-engineering/digit-reversal/) · [Notebook](digit-reversal.ipynb)
 
 ## Run locally
 

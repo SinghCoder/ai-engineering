@@ -10,7 +10,7 @@ import nbformat
 import train
 
 HERE = Path(__file__).resolve().parent
-PAGE = HERE.parents[1] / "docs" / "index.html"
+PAGE = HERE.parents[1] / "docs" / "digit-reversal" / "index.html"
 MILESTONES = (1, 2, 10, 25, 50, 100, 200, 500, 1000, 1500)
 
 
@@ -94,7 +94,7 @@ def build_page():
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Transformer digit reversal</title>
 <style>body{max-width:900px;margin:24px auto;padding:0 16px;font:16px/1.55 system-ui;color:#3c4043}</style>
-<p><a href="https://github.com/SinghCoder/ai-engineering/tree/main/transformers/digit-reversal">Notebook and code</a></p>
+<p><a href="../">All demos</a> · <a href="https://github.com/SinghCoder/ai-engineering/tree/main/transformers/digit-reversal">Notebook and code</a></p>
 <p>Replay a trained PyTorch model at saved checkpoints. The math uses input <code>38</code> in a replayed batch. The model weights come from training batches that held out <code>38</code>.</p>
 <div id="viewer"><p>Loading training replay…</p></div>
 <script id="payload" type="application/octet-stream">__PAYLOAD__</script>
