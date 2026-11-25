@@ -18,12 +18,12 @@
   </header>
   <main class="measure">
     <h1>How sound becomes a mel spectrogram</h1>
-    <p class="lede prose">Listen for three sounds in this clip. A low hum gives way to a hiss, then a rising tone. Slide the blue window over the waveform to see what a short stretch of sound reveals.</p>
+    <p class="lede prose">Play the clip. You’ll hear a hum, a hiss, and a rising tone. The blue window starts in the hum. Drag it into the hiss. What happens to the peaks beneath it?</p>
 
     <figure class="wave-figure" aria-labelledby="wave-title">
       <div class="figure-head">
         <div>
-          <h2 id="wave-title">One short window</h2>
+          <h2 id="wave-title">Listen to a slice of sound</h2>
           <p>Waveform · amplitude over time</p>
         </div>
         <button class="control play" id="play" type="button"><span id="play-icon" aria-hidden="true">▶</span> <span id="play-label">Play clip</span></button>
@@ -38,15 +38,15 @@
       <p id="audio-status" class="audio-status" role="status"></p>
       <div class="window-spectrum">
         <div class="figure-head"><h3>Spectrum inside the window</h3><span id="window-region"></span></div>
-        <p>Move into the hiss and watch the hum’s narrow frequency peaks spread out.</p>
+        <p>Each peak marks a frequency with a lot of power in this window.</p>
         <canvas id="spectrum" class="plot spectrum" role="img" aria-label="Frequency spectrum for the current window, with frequency in hertz and relative power in decibels."></canvas>
       </div>
     </figure>
 
     <section class="lesson" aria-labelledby="spectrum-title">
       <div class="prose section-intro">
-        <h2 id="spectrum-title">From a window to a column</h2>
-        <p>A Fourier transform estimates the power at each frequency inside the selected 25 ms window. Take a spectrum every 10 ms and line the columns up. The hum leaves horizontal lines at its steady frequencies. The rising tone leaves a diagonal trace as its frequency climbs.</p>
+        <h2 id="spectrum-title">Line up the spectra</h2>
+        <p>Look at the hum in the plot below. Its peaks stay at the same frequencies, so they form horizontal lines. The rising tone leaves a diagonal trace as its peak moves up. We get this <strong>spectrogram</strong> by moving the 25 ms window in 10 ms steps and using a Fourier transform to calculate a spectrum at each step.</p>
       </div>
       <figure class="map-figure" aria-labelledby="linear-title">
         <div class="figure-head">
@@ -54,14 +54,14 @@
           <span class="scale">−65 dB <span aria-hidden="true"></span> 0 dB</span>
         </div>
         <canvas id="linear" class="plot map" role="img" aria-label="Spectrogram with time in seconds, frequency in hertz, and a cursor synchronized to the waveform."></canvas>
-        <figcaption>Move the cursor here or on the waveform. One column is one window. The strongest point sets the color scale at 0 dB.</figcaption>
+        <figcaption>The cursor follows the selected window. The strongest point in this plot sets the 0 dB reference.</figcaption>
       </figure>
     </section>
 
     <section class="lesson" aria-labelledby="mel-title">
       <div class="prose section-intro">
-        <h2 id="mel-title">What a mel band keeps</h2>
-        <p>Mel bands pool neighboring frequencies. Low bands cover narrow ranges in hertz, while high bands cover wider ranges. The spectrogram below shows the same clip after that pooling. Pick a cell to see exactly which frequencies contribute to its value.</p>
+        <h2 id="mel-title">Which frequencies go into a mel band?</h2>
+        <p>Pick a cell near the bottom of the plot, then pick one near the top. Look at the range in hertz under the slider. Each <strong>mel band</strong> combines neighboring frequencies, and higher bands span wider ranges.</p>
       </div>
       <figure class="map-figure" aria-labelledby="mel-plot-title">
         <div class="figure-head">
@@ -88,13 +88,13 @@
         </div>
         <figcaption id="contribution"></figcaption>
       </figure>
-      <p class="prose bridge">The filter gives frequencies near the band center more weight. Add the weighted powers, then take the logarithm. Repeat this for all 80 bands and you get one feature vector. Some speech models, including <a href="https://arxiv.org/html/2606.10231v4#S3.SS2">Mel-LLM</a>, project that sequence into the language model’s input space.</p>
+      <p class="prose bridge">The triangle peaks at the center of the band. Multiply each bin’s power by the height of the triangle at that frequency, then add the products and take the logarithm. Do this for all 80 bands and you have one feature vector for this instant. Speech models such as <a href="https://arxiv.org/html/2606.10231v4#S3.SS2">Mel-LLM</a>, project a sequence of these vectors into the language model’s input space.</p>
     </section>
 
     <section class="lesson" aria-labelledby="tradeoff-title">
       <div class="prose section-intro">
-        <h2 id="tradeoff-title">The price of a longer window</h2>
-        <p>With more samples in each window, two nearby tones are easier to separate. Try the click next. The same longer window spreads that brief event across more frames.</p>
+        <h2 id="tradeoff-title">When does a longer window help?</h2>
+        <p>Look for the two peaks in the 60 ms window. Can you still see both at 10 ms? Now switch to the click and look for how many frames pick it up.</p>
       </div>
       <div class="experiment">
         <div class="experiment-bar">
@@ -113,7 +113,7 @@
       </div>
       <details id="method" class="prose method">
         <summary>Calculation notes</summary>
-        <p>The clip is generated at 16 kHz and lasts 2.4 seconds. Frames use centered Hann windows, with zero padding at the ends and a 1,024-point FFT. The FFT powers are unnormalized. Triangular filters are spaced on the HTK mel scale. Each heatmap uses its own peak as the 0 dB reference. The window comparisons share a reference within each pair.</p>
+        <p>We generate 2.4 seconds of audio at 16 kHz. For each frame, we apply a centered Hann window, pad with zeros, and compute a 1,024-point FFT. We square the magnitudes to get power and space the triangular filters on the HTK mel scale. Each heatmap uses its own peak as the 0 dB reference. Each pair in the window comparison shares a reference.</p>
       </details>
     </section>
   </main>
