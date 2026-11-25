@@ -26,10 +26,23 @@ const MelDSP = (() => {
     });
   }
 
+  function windowTerm(x, center, width, n) {
+    const index = center - Math.floor(width / 2) + n;
+    const padded = n >= width || index < 0 || index >= x.length;
+    const sample = padded ? 0 : x[index];
+    const weight = n >= width ? 0 : .5 - .5 * Math.cos(2 * Math.PI * n / (width - 1));
+    return { index, padded, sample, weight, value: sample * weight };
+  }
+
+  function dftTerm(value, n, k, size) {
+    const angle = -2 * Math.PI * ((k * n) % size) / size;
+    const cosine = Math.cos(angle), sine = Math.sin(angle);
+    return { cosine, sine, re: value * cosine, im: value * sine };
+  }
+
   function power(x, center, width) {
     const re = new Float64Array(fftSize), im = new Float64Array(fftSize);
-    for (let i=0; i<width; i++)
-      re[i] = (x[center - Math.floor(width/2) + i] ?? 0) * (.5 - .5*Math.cos(2*Math.PI*i/(width-1)));
+    for (let i=0; i<width; i++) re[i] = windowTerm(x, center, width, i).value;
     for (let i=1,j=0; i<fftSize; i++) {
       let bit = fftSize >> 1;
       for (; j & bit; bit >>= 1) j ^= bit;
@@ -66,6 +79,6 @@ const MelDSP = (() => {
     const peak=rows=>Math.max(1e-12,...rows.map(row=>Math.max(...row)));
     return {width,hop,bank,frames,mel,linearPeak:peak(frames),melPeak:peak(mel)};
   }
-  return {rate,length,fftSize,hz,signal,features};
+  return {rate,length,fftSize,hz,signal,features,windowTerm,dftTerm};
 })();
 if (typeof module !== 'undefined') module.exports = MelDSP;

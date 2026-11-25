@@ -99,3 +99,23 @@ output { font-variant-numeric: tabular-nums; }
 .window-spectrum p, #window-region { font-size: 0.83rem; color: var(--muted); }
 #window-region { font-weight: 650; }
 .window-spectrum .plot { height: clamp(105px, 12vw, 136px); }
+
+/* Optional calculation trace */
+#audit > summary { font-size: clamp(1.25rem, 3vw, 1.75rem); font-weight: 650; cursor: pointer; }
+#audit > p, .audit-content > p, #paper-example > p { margin-block: .75rem; }
+.audit-controls, .audit-map { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem .75rem; margin-block: 1rem; }
+.audit-controls input[type="number"] { width: 5rem; min-height: 44px; }
+.audit-controls input[type="range"] { flex: 1 1 8rem; }
+.audit-content, #paper-content { border-top: 1px solid var(--rule); padding-block: 1rem; overflow-wrap: anywhere; }
+.audit-formula { background: var(--soft); padding: .6rem .75rem; font-family: ui-monospace, monospace; }
+.audit-table-wrap { overflow-x: auto; max-width: 100%; }
+.audit-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: .88rem; text-align: right; }
+.audit-table th, .audit-table td { white-space: nowrap; padding: .35rem .55rem; border-bottom: 1px solid var(--rule); }
+.audit-table caption { text-align: left; font-weight: 650; padding-block: .5rem; }
+.audit-table td:first-child, .audit-table th:first-child { text-align: left; }
+.audit-table tr[data-selected] { background: #e9effb; }
+.column-pair { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); gap: 1rem; }
+.column-pair .comparison-note { margin-block: .3rem; }
+@media (max-width: 640px) { .column-pair { grid-template-columns: minmax(0, 1fr); } }
+.column-pair + figcaption { margin-bottom: .75rem; }
+#audit-jump { width: 5rem; min-height: 44px; }

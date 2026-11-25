@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="mel.css">
   <script src="dsp.js" defer></script>
   <script src="explore.js" defer></script>
+  <script src="audit.js" defer></script>
 </head>
 <body>
   <header class="masthead measure">
@@ -46,15 +47,25 @@
     <section class="lesson" aria-labelledby="spectrum-title">
       <div class="prose section-intro">
         <h2 id="spectrum-title">Line up the spectra</h2>
-        <p>Look at the hum in the plot below. Its peaks stay at the same frequencies, so they form horizontal lines. The rising tone leaves a diagonal trace as its peak moves up. We get this <strong>spectrogram</strong> by moving the 25 ms window in 10 ms steps and using a Fourier transform to calculate a spectrum at each step.</p>
+        <p>Pick a peak in the line spectrum or a cell below. Both views show the same power: the line uses height; the spectrogram uses color. Each time column is one spectrum turned upright. Look at the hum below. Its peaks stay at the same frequencies, so they form horizontal lines. The rising tone leaves a diagonal trace as its peak moves up. We get this <strong>spectrogram</strong> by moving the 25 ms window in 10 ms steps and using a Fourier transform to calculate a spectrum at each step.</p>
       </div>
       <figure class="map-figure" aria-labelledby="linear-title">
         <div class="figure-head">
           <h3 id="linear-title">A spectrum at every step</h3>
           <span class="scale">−65 dB <span aria-hidden="true"></span> 0 dB</span>
         </div>
-        <canvas id="linear" class="plot map" role="img" aria-label="Spectrogram with time in seconds, frequency in hertz, and a cursor synchronized to the waveform."></canvas>
-        <figcaption>The cursor follows the selected window. The strongest point in this plot sets the 0 dB reference.</figcaption>
+        <div class="column-pair">
+          <div><p class="comparison-note">All windows · time →</p><canvas id="linear" class="plot map" role="img" aria-label="Spectrogram with time in seconds, frequency in hertz, and a cursor synchronized to the waveform."></canvas></div>
+          <div><p class="comparison-note">Selected column · power →</p><canvas id="column" class="plot map" role="img" aria-label="The selected spectrum turned upright, with frequency on the vertical axis and decibels on the horizontal axis."></canvas></div>
+        </div>
+        <figcaption>The highlighted cell and the dot in the spectrum show the same bin. The strongest point in this plot sets the 0 dB reference.</figcaption>
+        <div class="range-row">
+          <label for="bin">Frequency bin</label>
+          <input id="bin" type="range" min="0" max="512" value="14">
+          <output id="bin-frequency" for="bin"></output>
+        </div>
+        <p id="bin-result" class="comparison-note"></p>
+        <button id="trace-bin" class="text-control" type="button">Trace this spectrum cell</button>
       </figure>
     </section>
 
@@ -87,8 +98,38 @@
           <div><span>Log-scaled mel value</span><output id="level" for="frame band"></output></div>
         </div>
         <figcaption id="contribution"></figcaption>
+        <button id="trace-mel" class="text-control" type="button">Trace this mel cell</button>
       </figure>
       <p class="prose bridge">The triangle peaks at the center of the band. Multiply each bin’s power by the height of the triangle at that frequency, then add the products and take the logarithm. Do this for all 80 bands and you have one feature vector for this instant. Speech models such as <a href="https://arxiv.org/html/2606.10231v4#S3.SS2">Mel-LLM</a>, project a sequence of these vectors into the language model’s input space.</p>
+    </section>
+
+    <section class="lesson" aria-labelledby="audit-title">
+      <details id="audit">
+        <summary id="audit-title">Calculation map: follow the actual numbers</summary>
+        <p class="prose">Start at a result and work backward. The window, frequency bin and mel band stay linked to the plots. <a href="../../digit-reversal/">The digit-reversal Transformer</a> uses the same approach: pick an output, then inspect the operands.</p>
+        <div class="audit-controls">
+          <label for="audit-frame">Window position</label>
+          <input id="audit-frame" type="range" min="0" max="239" value="40">
+          <output id="audit-selection" for="audit-frame"></output>
+          <label for="audit-bin">Frequency bin</label>
+          <input id="audit-bin" type="number" min="0" max="512" value="14">
+          <label for="audit-band">Mel band</label>
+          <input id="audit-band" type="number" min="1" max="80" value="12">
+        </div>
+        <div class="audit-map" role="group" aria-label="Calculation stage">
+          <button type="button" class="control" data-stage="window">1. Window &amp; pad</button>
+          <button type="button" class="control" data-stage="dft">2. Fourier transform</button>
+          <button type="button" class="control" data-stage="power">3. Power</button>
+          <button type="button" class="control" data-stage="mel">4. Mel filter</button>
+          <button type="button" class="control" data-stage="log">5. Log &amp; color</button>
+        </div>
+        <div id="audit-content" class="audit-content"></div>
+        <details id="paper-example" class="method">
+          <summary>Work an eight-sample example on paper</summary>
+          <p class="prose">This toy frame uses the same Fourier and power operations, with a rectangular window and no padding so the numbers stay small. All eight samples and all five nonnegative-frequency rows are shown. Start with bin 2: multiply its cosine row elementwise by the samples, then add. Repeat with the negative-sine row.</p>
+          <div id="paper-content"></div>
+        </details>
+      </details>
     </section>
 
     <section class="lesson" aria-labelledby="tradeoff-title">

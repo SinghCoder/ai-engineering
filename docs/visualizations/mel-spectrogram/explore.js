@@ -7,6 +7,7 @@ const ramp = [[238,241,250], [159,174,227], [82,113,187], [32,43,104], [18,27,67
 const clip = signal('mix');
 const frameInput = byId('frame');
 const bandInput = byId('band');
+const binInput = byId('bin');
 const model = features(clip, 25, 10, 80);
 const toDb = (power, reference) => 10 * Math.log10(Math.max(1e-12, power / reference));
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -62,6 +63,13 @@ function boundPlot({ g, left, width, height }) {
   g.clip();
 }
 
+function colorAt(power, reference) {
+  const position = (ramp.length - 1) * heightAt(power, reference);
+  const index = Math.min(ramp.length - 2, Math.floor(position));
+  const balance = position - index;
+  return ramp[index].map((value, c) => value * (1 - balance) + ramp[index + 1][c] * balance);
+}
+
 function makeHeatmap(rows, reference) {
   const canvas = document.createElement('canvas');
   canvas.width = rows.length;
@@ -69,11 +77,8 @@ function makeHeatmap(rows, reference) {
   const g = canvas.getContext('2d');
   const image = g.createImageData(canvas.width, canvas.height);
   rows.forEach((row, column) => row.forEach((power, bin) => {
-    const position = (ramp.length - 1) * heightAt(power, reference);
-    const index = Math.min(ramp.length - 2, Math.floor(position));
-    const balance = position - index;
     const offset = 4 * ((canvas.height - 1 - bin) * canvas.width + column);
-    for (let c = 0; c < 3; c++) image.data[offset + c] = ramp[index][c] * (1 - balance) + ramp[index + 1][c] * balance;
+    image.data.set(colorAt(power, reference), offset);
     image.data[offset + 3] = 255;
   }));
   g.putImageData(image, 0, 0);
@@ -146,15 +151,33 @@ function drawMaps(index, band) {
     g.strokeStyle = '#fff';
     g.lineWidth = 1;
     line(g, x, 0, x, height);
-    if (id === 'mel') {
-      const unit = height / model.bank.length;
+    {
+      const selected = id === 'mel' ? band : +binInput.value;
+      const unit = height / image.height;
       g.strokeStyle = '#ffc46b';
       g.lineWidth = 2;
-      g.strokeRect(x - Math.max(3, step) / 2, height - (band + 1) * unit, Math.max(3, step), unit);
+      g.strokeRect(x - Math.max(3, step) / 2, height - (selected + .5) * unit - Math.max(4, unit) / 2, Math.max(4, step), Math.max(4, unit));
     }
     g.restore();
     axes(plot, timeTicks, ticks, false);
   }
+}
+
+function drawColumn(row, selected) {
+  const plot = chart('column');
+  const {g, left, width, height} = plot;
+  const x = k => left + heightAt(row[k], model.linearPeak) * width;
+  const y = k => height * (1 - (k + .5) / row.length);
+  axes(plot, [[0, '−65 dB'], [1, '0 dB']], [[0, '0 Hz'], [.5, '4 kHz'], [1, '8 kHz']]);
+  g.strokeStyle = palette.signal;
+  g.lineWidth = 1.5;
+  g.beginPath();
+  row.forEach((_, k) => k ? g.lineTo(x(k), y(k)) : g.moveTo(x(k), y(k)));
+  g.stroke();
+  g.fillStyle = palette.weight;
+  g.beginPath();
+  g.arc(x(selected), clamp(y(selected), 4, height), 4, 0, 2 * Math.PI);
+  g.fill();
 }
 
 function drawBand(row, band) {
@@ -202,7 +225,7 @@ function drawSelection() {
   byId('bandInfo').textContent = Math.round(band.lo) + '–' + Math.round(band.hi) + ' Hz';
   bandInput.setAttribute('aria-valuetext', 'Band ' + (bandIndex + 1) + ', ' + byId('bandInfo').textContent);
   byId('power').textContent = power.toPrecision(3);
-  byId('level').textContent = power > 0 ? toDb(power, model.melPeak).toFixed(1) + ' dB' : '−∞ dB';
+  byId('level').textContent = toDb(power, model.melPeak).toFixed(1) + ' dB';
   const top = band.bins.reduce((best, [k, weight]) => {
     const value = row[k] * weight;
     return value > best.value ? { k, weight, value } : best;
@@ -212,9 +235,21 @@ function drawSelection() {
     : 'The selected frame contributes zero power to this band.';
   drawWave(center);
   const spectrum = chart('spectrum');
-  axes(spectrum, [[0, '0 Hz'], [1/3, '1 kHz'], [2/3, '2 kHz'], [1, '3 kHz']], powerTicks);
-  spectrumTrace(spectrum, row, model.linearPeak, 0, 3000);
+  const k = +binInput.value, frequency = hz(k), level = toDb(row[k], model.linearPeak);
+  const span = frequency > 3000 ? 8000 : 3000;
+  axes(spectrum, [[0, '0 Hz'], [1/3, (span / 3000).toFixed(1) + ' kHz'], [2/3, (span / 1500).toFixed(1) + ' kHz'], [1, span / 1000 + ' kHz']], powerTicks);
+  spectrumTrace(spectrum, row, model.linearPeak, 0, span);
+  const {g, left, width, height} = spectrum;
+  g.beginPath();
+  g.arc(left + width * frequency / span, height * (1 - heightAt(row[k], model.linearPeak)), 4, 0, 2 * Math.PI);
+  g.fillStyle = palette.weight;
+  g.fill();
+  byId('bin-frequency').textContent = frequency.toFixed(2) + ' Hz';
+  binInput.setAttribute('aria-valuetext', 'Bin ' + k + ', ' + byId('bin-frequency').textContent);
+  byId('bin-result').textContent = timeLabel + ' · bin ' + k + ' · ' + level.toFixed(2) + ' dB in both plots' + (level < -65 ? ' (displayed at the −65 dB floor)' : '');
+  byId('audit').dispatchEvent(new Event('tracechange'));
   drawMaps(index, bandIndex);
+  drawColumn(row, k);
   drawBand(row, band);
 }
 
@@ -320,20 +355,28 @@ playButton.addEventListener('click', async () => {
   }
 });
 
-for (const id of ['wave', 'linear', 'mel']) {
+for (const id of ['wave', 'spectrum', 'linear', 'mel', 'column']) {
   const canvas = byId(id);
   const select = event => {
     stopPlayback();
     const box = canvas.getBoundingClientRect(), style = getComputedStyle(canvas);
     const left = parseFloat(style.getPropertyValue('--plot-left')), right = parseFloat(style.getPropertyValue('--plot-right'));
     const position = clamp((event.clientX - box.left - left) / (box.width - left - right), 0, 1);
-    frameInput.value = Math.round(position * clip.length / model.hop);
+    if (id === 'spectrum') {
+      const span = hz(+binInput.value) > 3000 ? 8000 : 3000;
+      binInput.value = Math.round(position * span / hz(1));
+    } else if (id === 'column') {
+      binInput.value = Math.floor((1 - (event.clientY - box.top) / (box.height - 26)) * model.frames[0].length);
+    } else {
+      frameInput.value = Math.round(position * clip.length / model.hop);
+      if (id === 'linear') binInput.value = Math.floor((1 - (event.clientY - box.top) / (box.height - 26)) * model.frames[0].length);
+    }
     if (id === 'mel') bandInput.value = 1 + Math.floor((1 - (event.clientY - box.top) / (box.height - 26)) * model.bank.length);
     drawSelection();
   };
   canvas.addEventListener('pointerdown', event => {
     if (!event.isPrimary || event.button !== 0) return;
-    if (event.pointerType === 'mouse') canvas.setPointerCapture(event.pointerId);
+    if (event.pointerType === 'mouse' && id !== 'spectrum') canvas.setPointerCapture(event.pointerId);
     select(event);
   });
   canvas.addEventListener('pointermove', event => {
@@ -342,6 +385,7 @@ for (const id of ['wave', 'linear', 'mel']) {
 }
 frameInput.addEventListener('input', () => { stopPlayback(); drawSelection(); });
 bandInput.addEventListener('input', drawSelection);
+binInput.addEventListener('input', () => { stopPlayback(); drawSelection(); });
 byId('hop').addEventListener('change', updateComparison);
 document.querySelectorAll('[data-example]').forEach(button => button.addEventListener('click', () => {
   example = button.dataset.example;
