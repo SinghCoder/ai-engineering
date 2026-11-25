@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>From waveform to mel spectrogram</title>
+<style>
+:root{color-scheme:light dark;--paper:light-dark(#fbfaf6,#151c20);--ink:light-dark(#18282d,#eef6f4);--muted:light-dark(#455b60,#b2c5c7);--accent:light-dark(#00695c,#75dbca);--rule:light-dark(#bfceca,#43605d)}
+*{box-sizing:border-box}
+body{max-width:940px;margin:auto;padding:24px 18px 60px;background:var(--paper);color:var(--ink);font:16px/1.5 system-ui}
+a{color:var(--accent)} h1{font:700 clamp(2rem,6vw,3.55rem)/1.05 Georgia,serif;margin:.25em 0} h2{font-size:1.2rem;margin:0} p{margin:.5em 0 1em}
+small,.note{color:var(--muted)} .eyebrow{color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.13em;font-size:.76rem}
+section{border-top:1px solid var(--rule);padding-top:16px;margin-top:22px}
+.controls{display:flex;align-items:end;flex-wrap:wrap;gap:10px 20px;margin:12px 0}
+label{display:grid;gap:4px;font-size:.9rem} select,button{font:inherit;padding:5px 8px} input{max-width:100%;accent-color:var(--accent)} .scrub{flex:1;min-width:160px}
+canvas{width:100%;display:block;touch-action:pan-y} #wave{height:118px} .heat{height:155px} #detail{height:165px}
+output{font-variant-numeric:tabular-nums} figure{margin:12px 0} figcaption{font-size:.9rem}
+.legend{display:inline-block;vertical-align:middle;width:110px;height:9px;background:linear-gradient(90deg,#15192e,#29496b,#168780,#f5d365)}
+</style>
+<main>
+<a href="../../">← All demos</a>
+<header>
+<p class="eyebrow">Audio features · interactive explainer</p>
+<h1>From waveform to mel spectrogram</h1>
+<p>What does one audio feature frame contain? Follow a short window of sound from raw samples to one column of mel-band energies.</p>
+</header>
+
+<section aria-labelledby="step1">
+<h2 id="step1">1 · Pick a sound and move the window</h2>
+<div class="controls">
+<label>Sound
+<select id="sound"><option value="mix">Hum → hiss → rising tone</option><option value="tones">Two close tones (440 + 510 Hz)</option><option value="chirp">Rising tone</option><option value="pulse">Short click</option></select></label>
+<button id="play" type="button">Play sound</button>
+<button id="reset" type="button">Reset controls</button>
+<label>Window<select id="size"><option value="10">10 ms</option><option value="25" selected>25 ms</option><option value="60">60 ms</option></select></label>
+<label>Hop<select id="hop"><option value="5">5 ms</option><option value="10" selected>10 ms</option><option value="20">20 ms</option></select></label>
+</div>
+<p class="note" id="hint"></p>
+<p><strong>Make a prediction:</strong> If you move the window twice as far at each step, will each frame cover twice as much sound? Change the hop from 10 to 20 ms, then check the window and frame count.</p>
+<label class="scrub">Selected frame <input id="frame" type="range" min="0" value="0"></label>
+<p><output id="frameInfo" aria-live="off"></output></p>
+<canvas id="wave" role="img" aria-label="Waveform with the selected analysis window shaded"></canvas>
+<small>Click a plot or use the frame slider. The shaded region shows the window; the line marks its center.</small>
+</section>
+
+<section aria-labelledby="step2">
+<h2 id="step2">2 · Compare Hz bins with mel bands</h2>
+<p>Both plots analyze the <strong>same sound at the same times</strong>. The upper plot keeps evenly spaced frequency bins. The lower plot combines them into overlapping bands, spaced evenly on the mel scale: narrower in Hz at the low end, wider at the high end.</p>
+<div class="controls"><label>Mel bands<select id="bands"><option>24</option><option>40</option><option selected>80</option></select></label>
+<small>Relative power: −65 dB <span class="legend" aria-hidden="true"></span> 0 dB (peak of each plot)</small></div>
+<figure><figcaption><strong>Linear-frequency spectrogram</strong> · Hz bins</figcaption><canvas id="linear" class="heat" role="img" aria-label="Linear frequency spectrogram"></canvas></figure>
+<figure><figcaption><strong>Log-mel spectrogram</strong> · mel bands, indexed from low to high</figcaption><canvas id="mel" class="heat" role="img" aria-label="Log-mel spectrogram with selected frame and band"></canvas></figure>
+<p class="note"><output id="shape"></output> In these plots, each frame is drawn as a column; model inputs are often written with frames as rows.</p>
+</section>
+
+<section aria-labelledby="step3">
+<h2 id="step3">3 · Take one mel value apart</h2>
+<p>Click the mel plot or move the band slider. The triangle shows how much weight the chosen mel band gives to each Hz bin. Multiply each bin’s power by its weight, sum, and then take the log.</p>
+<label class="scrub">Mel band <input id="band" type="range" min="1" value="12"></label>
+<p><output id="bandInfo" aria-live="off"></output></p>
+<canvas id="detail" role="img" aria-label="Selected frame's spectrum and selected mel band's triangular weights"></canvas>
+<small>Zoomed around the selected band. Solid line: selected frame’s spectrum (relative dB). Dashed triangle: band weights (0 to 1, scaled separately).</small>
+<p class="note" id="contribution"></p>
+</section>
+<section>
+<h2>Try this</h2>
+<ul><li>Play <strong>Hum → hiss → rising tone</strong>. Find the hum’s horizontal harmonics, the hiss’s broad patch, and the rising tone’s slope.</li><li>Switch to <strong>Two close tones</strong> and compare 10 ms with 60 ms. A longer window can separate nearby frequencies better. Then change just the hop: it changes how often you measure, not what each window covers.</li><li>With a <strong>Short click</strong>, try the same windows. The longer one spreads the click across more time in the spectrogram.</li></ul>
+<p><strong>Where the model comes in:</strong> Each column above is a feature vector, not a word or token ID. An audio model can send that sequence through an audio encoder or, as <a href="https://arxiv.org/html/2606.10231v4#S3.SS2">Mel-LLM</a> demonstrates, use a lightweight front end and feed projected features into the language model without a dedicated speech Transformer.</p>
+<details><summary>Calculation notes</summary><p>Generated mono audio at 16 kHz, 2.4 seconds. Centered Hann windows use zero padding at the ends and a 1024-point FFT. We use unnormalized power and triangular filters spaced by the HTK mel formula. The dB transform uses 10 log₁₀(power/reference); colors clip below −65 dB and each plot has its own reference. The filter triangle is linear in Hz between its three vertices. This is a teaching implementation, not a checkpoint-specific feature extractor.</p></details>
+</section>
+</main>
+<script src="dsp.js"></script>
+<script src="explore.js"></script>
+</html>
