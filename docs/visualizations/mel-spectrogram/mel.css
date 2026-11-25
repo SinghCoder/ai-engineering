@@ -11,9 +11,9 @@
 .masthead a { color: var(--muted); text-decoration: none; }
 .masthead a:hover { text-decoration: underline; }
 
-main { padding: clamp(1.7rem, 4vw, 3.45rem) 0 5rem; }
-main h1 { font-size: clamp(2.3rem, 5.5vw, 3.52rem); }
-.lede { margin: 1rem 0 clamp(1.5rem, 4vw, 2.5rem); font-size: clamp(1.05rem, 2vw, 1.22rem); }
+main { padding: clamp(1.7rem, 3.4vw, 2.65rem) 0 5rem; }
+main h1 { font-size: clamp(2.3rem, 4.5vw, 3.15rem); }
+.lede { margin: 1rem 0 clamp(1.4rem, 3vw, 1.8rem); font-size: clamp(1.05rem, 2vw, 1.22rem); }
 .wave-figure, .slice-figure, .map-figure, .experiment {
   padding: clamp(0.8rem, 2.5vw, 1.5rem);
   border: 1px solid var(--rule);
@@ -42,7 +42,7 @@ main h1 { font-size: clamp(2.3rem, 5.5vw, 3.52rem); }
   margin-top: 0.4rem;
 }
 #wave, #linear, #mel { cursor: crosshair; touch-action: pan-y; }
-.wave { height: clamp(105px, 14vw, 150px); }
+.wave { height: clamp(105px, 12vw, 129px); }
 .map { height: clamp(132px, 18vw, 209px); }
 .spectrum, .detail { height: clamp(134px, 18vw, 192px); }
 .range-row { display: grid; grid-template-columns: max-content minmax(3rem, 1fr) max-content; align-items: center; gap: 0.25rem 0.85rem; font-size: 0.88rem; }
@@ -88,7 +88,6 @@ output { font-variant-numeric: tabular-nums; }
 @media (max-width: 660px) {
   :root { --plot-left: 43px; --plot-right: 13px; }
   .measure { width: calc(100% - 1.6rem); }
-  .title-break { display: none; }
   .range-row { grid-template-columns: 1fr auto; row-gap: 0; }
   .range-row input { grid-column: 1 / -1; grid-row: 2; }
   .range-row output { grid-column: 2; grid-row: 1; }
