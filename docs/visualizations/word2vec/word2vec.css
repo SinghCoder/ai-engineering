@@ -40,3 +40,9 @@ tr[data-active] { background:#f8ead5; }
 .scrub + .note { margin-top:.45rem; }
 .control:disabled { cursor:not-allowed; opacity:.65; }
 #update:not(:empty) { margin-bottom:.9rem; }
+.walkthrough > p, .walkthrough > details { margin-block:.65rem; }
+.masked { display:flex; gap:.45rem; align-items:center; flex-wrap:wrap; font-size:1.15rem; }
+.walkthrough .numtable { max-width:45rem; }
+.walkthrough .formula { max-width:75ch; }
+#walk-result { margin-block:.65rem; min-height:2rem; }
+#learn-title + p { margin-block:.75rem 1rem; }

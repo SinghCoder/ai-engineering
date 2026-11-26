@@ -182,3 +182,69 @@ $('reset').onclick=()=>{
   render(true);
 };
 render(true);
+
+// The guided probe is fixed to the original initialization. Its optional SGD
+// update uses a copy; it cannot mutate the saved training trajectory.
+(() => {
+  const {E,U}=runs.base.cbow[1][0], inputs=['the','eats'].map(id), target=id('cat');
+  const forward=(e,u)=>{
+    const h=[0,1].map(d=>inputs.reduce((sum,i)=>sum+e[i][d],0)/inputs.length);
+    const z=u.map(row=>dot(row,h)), max=Math.max(...z);
+    const terms=z.map(value=>Math.exp(value-max)), denom=terms.reduce((a,b)=>a+b);
+    return {h,z,p:terms.map(value=>value/denom),max,terms,denom};
+  };
+  const before=forward(E,U);
+  const errors=before.p.map((x,i)=>x-Number(i===target));
+  const dh=[0,1].map(d=>dot(errors,U.map(row=>row[d])));
+  const updatedE=E.map((row,i)=>row.map((v,d)=>v-rate*inputs.filter(x=>x===i).length/inputs.length*dh[d]));
+  const updatedU=U.map((row,i)=>row.map((v,d)=>v-rate*errors[i]*before.h[d]));
+  const after=forward(updatedE,updatedU);
+  const short=x=>x.toFixed(6);
+  const percent=p=>(p*100).toFixed(3)+'%';
+  $('walk-average').innerHTML=table('The two input rows and their average',['Row','Feature 1','Feature 2'],[
+    ...inputs.map(i=>[vocab[i],...E[i].map(short)]),['Average',...before.h.map(short)]
+  ])+equation('Clue feature 2 = ('+inputs.map(i=>short(E[i][1])).join(' + ')+') / 2 = '+short(before.h[1]));
+  const renderScore=()=>{
+    const w=$('walk-word').value, i=id(w);
+    $('walk-quick').textContent='Before training: '+percent(before.p[i])+' for '+w;
+    $('walk-score').innerHTML=equation('Score for '+w+' = ('+short(before.h[0])+' × '+short(U[i][0])+') + ('+
+      short(before.h[1])+' × '+short(U[i][1])+') ≈ '+short(before.z[i]))+
+      '<p>Before training: '+percent(before.p[i])+' probability for <em>'+w+'</em>.</p>';
+    $('walk-probs').innerHTML=equation('To keep the exponentials stable, subtract the same max score m = '+short(before.max)+
+      ' from every score. Sum exp(score − m) ≈ '+short(before.denom)+'.')+
+      table('Full vocabulary',['Word','Score','exp(score − m)','Probability'],vocab.map((word,j)=>[
+        word,short(before.z[j]),short(before.terms[j]),short(before.p[j])
+      ]),i);
+  };
+  const renderStep=applied=>{
+    const old=U[target][1], grad=errors[target]*before.h[1];
+    $('walk-gradient').innerHTML=equation('Before the update: cat’s output weight 2 = '+short(old)+
+      '; clue feature 2 = '+short(before.h[1]))+(applied?
+      '<p>The weight goes down. Multiplying a more negative weight by the negative clue feature raises that part of the score.</p>'+
+      equation('Gradient = (p(cat) − 1) × clue feature 2 = ('+short(before.p[target])+
+        ' − 1) × '+short(before.h[1])+' ≈ '+short(grad))+
+      equation('New weight ≈ '+short(old)+' − '+rate+' × '+short(grad)+' = '+short(updatedU[target][1]))+
+      '<p class="note">That’s one weight. SGD updates both clue rows and all scoring rows together, using the gradients from before the step.</p>'
+      :'');
+    $('walk-result').textContent=applied?'Run the same example again: p(cat) rises from '+percent(before.p[target])+
+      ' to '+percent(after.p[target])+'. Loss falls from '+(-Math.log(before.p[target])).toFixed(4)+' to '+
+      (-Math.log(after.p[target])).toFixed(4)+' nats.':'Before the update, p(cat) = '+percent(before.p[target])+'.';
+    $('walk-step').disabled=applied;
+    $('walk-reset').disabled=!applied;
+  };
+  $('walk-word').onchange=renderScore;
+  $('walk-step').onclick=()=>{renderStep(true);$('walk-reset').focus();};
+  $('walk-reset').onclick=()=>{renderStep(false);$('walk-step').focus();};
+  $('walk-audit').onclick=()=>{
+    Object.assign(state,defaults,{step:0,stage:'update'});
+    for(const field of ['variant','radius','query','step']) $(field).value=state[field];
+    $('table').value='U';$('weight').value='cat';$('feature').value='1';
+    render(true);$('math').open=true;
+    $('math').querySelector('summary').focus({preventScroll:true});
+    $('math').scrollIntoView({block:'start'});
+  };
+  $('reset').addEventListener('click',()=>{
+    $('walk-word').value='cat';renderScore();renderStep(false);
+  });
+  renderScore();renderStep(false);
+})();

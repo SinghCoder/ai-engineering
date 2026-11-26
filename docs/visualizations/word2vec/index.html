@@ -12,7 +12,40 @@
 <header class="measure mast"><a href="../../">← All explorations</a><a href="https://github.com/SinghCoder/ai-engineering/blob/main/word2vec/word2vec.ipynb">Jupyter notebook</a></header>
 <main class="measure">
 <h1>How Word2vec learns from neighbors</h1>
-<p class="lede prose">Keep <strong>cat</strong> selected and switch to Skip-gram. Which words become the answers instead of the clues?</p>
+<p class="lede prose">Cover up <strong>cat</strong> in “the cat eats fish.” Can a model use <em>the</em> and <em>eats</em> to fill the gap? Follow one guess, correct it once, and see which numbers change.</p>
+
+<section class="experiment walkthrough" aria-labelledby="walk-title">
+  <h2 id="walk-title">1. Build one guess</h2>
+  <p class="masked"><span class="clue">the</span> <span class="target">?</span> <span class="clue">eats</span> <span>fish</span></p>
+  <div class="controls"><label for="walk-word">Which candidate should we score? <select class="control" id="walk-word"><option value="cat">cat</option><option value="dog">dog</option></select></label><output id="walk-quick" for="walk-word"></output></div>
+  <p class="prose">With a one-word window on either side, the model looks up <em>the</em> and <em>eats</em> in its input table. Each row holds two numbers. At the start of training those numbers are random. Average the two rows to make one vector for the clues. That average is the “bag” in CBOW: swapping the two clues leaves it unchanged.</p>
+  <div id="walk-average"></div>
+  <p class="prose">Now compare that clue vector with each candidate’s row in a separate <strong>output table</strong>. The input row represents a word when it’s a clue; the output row scores it when it’s a possible answer. The same word can play both roles, but the two rows are learned independently.</p>
+  <div id="walk-score" aria-live="polite"></div>
+  <p class="prose">A score isn’t a probability. Softmax exponentiates every score and divides by the sum, so all 12 probabilities add to one. The correct answer in this sentence is <em>cat</em>. Its probability determines the loss: a lower probability means a larger correction signal.</p>
+  <details><summary>See all 12 scores and the softmax denominator</summary><div id="walk-probs"></div></details>
+</section>
+
+<section class="lesson" aria-labelledby="learn-title">
+  <h2 id="learn-title">2. Correct that guess once</h2>
+  <p class="prose">Look at the second weight in the output row for <em>cat</em>. The second component of the clue vector is negative. To raise the dot product, should that weight go up or down?</p>
+  <div class="experiment walkthrough">
+    <div id="walk-gradient"></div>
+    <div class="controls"><button type="button" class="control" id="walk-step">Apply one SGD update</button><button type="button" class="control" id="walk-reset" disabled>Undo update</button></div>
+    <div id="walk-result" aria-live="polite"></div>
+    <details><summary>Why is the gradient p(cat) − 1?</summary>
+      <p class="prose">First differentiate the loss with respect to the <em>score</em>, then the score with respect to the <em>weight</em>.</p>
+      <p class="formula">−ln p(cat) = ln Σ exp(score[word]) − score[cat]</p>
+      <p class="prose">The derivative of the first term with respect to the cat score is its softmax probability. The derivative of −score[cat] is −1. Finally, the derivative of the cat score with respect to its second output weight is just clue feature 2: that’s the number multiplying the weight in the dot product. Multiply these two derivatives to get the weight gradient.</p>
+    </details>
+    <button type="button" class="text-control" id="walk-audit">Trace this example in the calculation map</button>
+  </div>
+  <p class="prose">That step trains a prediction, not a dictionary definition. Next, change what the model gets to see and what counts as a correct answer.</p>
+</section>
+
+<section class="lesson" aria-labelledby="direction-title">
+<h2 id="direction-title">3. Turn the prediction around</h2>
+<p class="prose">Keep <em>cat</em> selected and flip to Skip-gram. The center word now supplies the input vector. The neighbors become separate targets: score <em>the</em> on one training pair and <em>eats</em> on another. Both use the same softmax over the vocabulary; there isn’t a separate left or right output slot.</p>
 <section class="experiment" aria-label="Choose which words predict which">
   <div class="controls">
     <div class="choice" role="group" aria-label="Training objective">
@@ -26,10 +59,11 @@
   <div id="pairs" class="pairs" aria-live="polite"></div>
   <p id="rule" class="note"></p>
 </section>
+</section>
 
 <section class="lesson">
-<h2>Can two words become neighbors without meeting?</h2>
-<p class="prose">The six training sentences never put <em>cat</em> and <em>dog</em> together. In the original corpus they share contexts. Check which words are closest to <em>dog</em> after training, then change only the two <em>dog</em> sentences and compare. Both runs start with the same weights.</p>
+<h2>4. Can two words become neighbors without meeting?</h2>
+<p class="prose">The six training sentences never put <em>cat</em> and <em>dog</em> together. In the original corpus they share contexts. In Skip-gram, their input vectors keep getting asked to score the same neighbors; in CBOW, both words get trained as answers to the same clue vectors. Those shared prediction jobs can encourage similarity, but the loss never directly tells their input vectors to point in the same direction. Check where <em>dog</em> ends up, then change only its two sentences. Both runs start with the same weights.</p>
 <div class="experiment">
   <div class="controls">
     <label for="variant">Corpus <select class="control" id="variant"><option value="base">Original</option><option value="edit">Edit the dog sentences</option></select></label>
@@ -73,7 +107,7 @@
 </details>
 </section>
 <footer class="lesson prose">
-<p>This teaching model uses a fixed symmetric window, two features, full softmax, and one-example SGD. It leaves out hierarchical softmax and negative sampling. For the two prediction directions, see <a href="https://arxiv.org/abs/1301.3781">Mikolov et al., §§3.1–3.2 and Figure 1</a>. For step-by-step tensor inspection, see the <a href="../../digit-reversal/">digit-reversal Transformer</a>.</p>
+<p>This teaching model uses a fixed symmetric window, two features, full softmax, and one-example SGD. It leaves out hierarchical softmax and negative sampling. For the two prediction directions, see <a href="https://arxiv.org/abs/1301.3781">Mikolov et al., §§3.1–3.2 and Figure 1</a>.</p>
 </footer>
 </main>
 </body>
